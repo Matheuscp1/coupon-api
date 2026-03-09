@@ -2,6 +2,7 @@ package org.coupon.api.exception;
 
 import jakarta.validation.ConstraintViolationException;
 import org.springframework.http.HttpStatus;
+import org.springframework.transaction.TransactionSystemException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.ResponseStatus;
@@ -27,18 +28,40 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(ConstraintViolationException.class)
     @ResponseStatus(HttpStatus.BAD_REQUEST)
-    public GenericErrors handleValidationException(ConstraintViolationException ex) {
-        String errors = ex.getConstraintViolations()
+    public GenericErrors handleConstraintViolationException(ConstraintViolationException ex) {
+        List<String> errors = ex.getConstraintViolations()
                 .stream()
-                .map(v -> v.getPropertyPath() + ": " + v.getMessage())
-                .collect(Collectors.joining("; "));
+                .map(err -> err.getPropertyPath() + ": " + err.getMessage())
+                .toList();
         return new GenericErrors(errors);
     }
     @ExceptionHandler(MethodArgumentNotValidException.class)
-    public GenericErrors handleValidationErrors(MethodArgumentNotValidException ex) {
+    @ResponseStatus(HttpStatus.BAD_REQUEST)
+    public GenericErrors handleMethodArgumentNotValidException(MethodArgumentNotValidException ex) {
         List<String> errors = ex.getBindingResult().getFieldErrors().stream()
                 .map(err -> err.getField() + ": " + err.getDefaultMessage())
                 .toList();
         return new GenericErrors(errors);
     }
+
+    @ExceptionHandler(TransactionSystemException.class)
+    @ResponseStatus(HttpStatus.BAD_REQUEST)
+    public GenericErrors handleTransactionSystemException(TransactionSystemException ex) {
+
+        Throwable cause = ex.getRootCause();
+
+        if (cause instanceof ConstraintViolationException violationException) {
+
+            List<String> errors = violationException.getConstraintViolations()
+                    .stream()
+                    .map(err -> err.getPropertyPath() + ": " + err.getMessage())
+                    .toList();
+
+            return new GenericErrors(errors);
+        }
+
+        return new GenericErrors("Transaction error");
+    }
+
+
 }

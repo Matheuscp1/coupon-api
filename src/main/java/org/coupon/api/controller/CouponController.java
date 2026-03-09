@@ -53,7 +53,7 @@ public class CouponController implements CouponControllerOpenApi {
     @Override
     @PutMapping("/{id}")
     @ResponseStatus(HttpStatus.OK)
-    public CouponResponseDTO update(@PathVariable UUID id, @RequestBody CouponRequestDTO request){
+    public CouponResponseDTO update(@PathVariable UUID id,@Valid @RequestBody CouponRequestDTO request){
         return service.update(id, request);
     }
 
